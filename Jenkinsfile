@@ -12,7 +12,7 @@ pipeline {
         
         stage('SAST Scan - Checkmarx One') {
             steps {
-             checkmarxASTScanner additionalOptions: '--debug', baseAuthUrl: 'https://ind.iam.checkmarx.net/', branchName: 'master', checkmarxInstallation: 'CxOne-CLI', credentialsId: '', projectName: 'Saurabhcx/scale-sec-vulnado', serverUrl: 'https://ind.ast.checkmarx.net/', tenantName: 'Testing15'
+             checkmarxASTScanner additionalOptions: '--debug', branchName: 'master', checkmarxInstallation: 'Test IND', credentialsId: '', projectName: 'Saurabhcx/scale-sec-vulnado', serverUrl: 'https://ind.ast.checkmarx.net/', tenantName: 'Testing15'
             }
         }
     }
