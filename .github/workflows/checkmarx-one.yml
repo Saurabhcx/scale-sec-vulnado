@@ -1,12 +1,10 @@
 name: Checkmarx Scan
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:      # manual "Run workflow" button, any branch
+  push:                   # any branch
+  pull_request:           # PRs into any branch
     types: [opened, reopened, synchronize]
-    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -25,28 +23,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkmarx One scan
-        uses: checkmarx/ast-github-action@8e887bb93dacc44e0f5b64ee2b06d5815f89d4fc
+        uses: checkmarx/ast-github-action@main
         with:
-          base_uri: https://ind.ast.checkmarx.net
-          cx_client_id: Test_Saurabh_New
-          cx_client_secret: 3aGM17MQhFWB3XdcY6ozp4xl1V5Uz3FD6HQ6fVYsP4wYfMbX6QBbtXIOSyq2OYpoPhf8M5MJOjDzY4upoUiENo # This should be created within your Checkmarx One account : https://checkmarx.com/resource/documents/en/34965-118315-authentication-for-checkmarx-one-cli.html#UUID-a4e31a96-1f36-6293-e95a-97b4b9189060_UUID-4123a2ff-32d0-2287-8dd2-3c36947f675e
+          base_uri: https://ind.ast.checkmarx.net/
           cx_tenant: cx_ind_internal_test
-          additional_params: --report-format sarif --output-path .
+          cx_client_id: Test_Saurabh_New
+          cx_client_secret: FqGxmjkoTVLcWQx7nwUWkRwDDtKHR4y91vSq7TiZrVQJnUJzyjmTLNraPDLsGk3IhY59879q86dcOPw9gpC6iu
+          project_name: Saurabh-scale-sec-vulnado-github-action-scan
+          branch: ${{ github.head_ref || github.ref_name }}
+          additional_params: --report-format sarif --output-name cx_result --output-path .
 
-      # Fix invalid "level" values so GitHub accepts the SARIF
       - name: Fix SARIF levels
+        if: always()
         run: |
-          jq '(.runs[].results[]) |= (
-                .level |= (
-                  (. // "warning" | ascii_downcase) as $l
-                  | if ($l == "none" or $l == "note" or $l == "warning" or $l == "error") then $l
-                    elif ($l == "info" or $l == "low") then "note"
-                    elif $l == "medium" then "warning"
-                    elif ($l == "high" or $l == "critical") then "error"
-                    else "warning" end))' \
-            cx_result.sarif > cx_fixed.sarif && mv cx_fixed.sarif cx_result.sarif
+          if [ -f cx_result.sarif ]; then
+            jq '(.runs[].results[]? | select(.level != null) | .level) |= (if . == "none" or . == "note" or . == "warning" or . == "error" then . else "warning" end)' cx_result.sarif > cx_fixed.sarif
+            mv cx_fixed.sarif cx_result.sarif
+          fi
 
-      - name: Upload SARIF file
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
         uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: cx_result.sarif
         with:
           sarif_file: cx_result.sarif
